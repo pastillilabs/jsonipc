@@ -21,7 +21,7 @@ public:
     bool connectToServer(const QString& name, int timeout = 1000);
     bool isConnected() const;
 
-    void send(const QJsonObject& message);
+    Q_INVOKABLE void send(const QJsonObject& message);
 
 signals:
     void connected();
