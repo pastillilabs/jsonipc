@@ -33,7 +33,8 @@ public:
     bool isEmpty() const;
     bool isListening() const;
 
-    void sendAll(const QJsonObject& message);
+    void sendJsonMessageAll(const QJsonObject& message);
+    void sendBinaryMessageAll(const QByteArray& message);
 
 signals:
     void newClient(JsonClient& client);

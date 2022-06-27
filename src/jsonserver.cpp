@@ -89,16 +89,36 @@ bool JsonServer::isListening() const
     return mLocalServer.isListening();
 }
 
-void JsonServer::sendAll(const QJsonObject& message)
+void JsonServer::sendJsonMessageAll(const QJsonObject& message)
 {
     const QByteArray byteArray(QJsonDocument(message).toJson(QJsonDocument::Compact));
-    const int size{byteArray.size()};
 
-    for(JsonClient* jsonClient : mClients) {
+    Header header;
+    header.mType = Header::MSG_TYPE_JSON;
+    header.mSize = static_cast<quint32>(byteArray.size());
+
+    const auto& clients = mClients;
+    for(JsonClient* jsonClient : clients) {
         QLocalSocket* socket(jsonClient->mLocalSocket);
 
-        socket->write(reinterpret_cast<const char*>(&size), static_cast<qint64>(sizeof(size)));
+        socket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
         socket->write(byteArray);
+        socket->flush();
+    }
+}
+
+void JsonServer::sendBinaryMessageAll(const QByteArray& message)
+{
+    Header header;
+    header.mType = Header::MSG_TYPE_BINARY;
+    header.mSize = static_cast<quint32>(message.size());
+
+    const auto& clients = mClients;
+    for(JsonClient* jsonClient : clients) {
+        QLocalSocket* socket(jsonClient->mLocalSocket);
+
+        socket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
+        socket->write(message);
         socket->flush();
     }
 }

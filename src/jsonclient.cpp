@@ -22,18 +22,25 @@ JsonClient::JsonClient(QLocalSocket* localSocket, QObject* parent)
         bool messageReceived{true};
 
         while(!mLocalSocket->atEnd() && messageReceived) {
-            // Read incoming message size
-            if(mMessageSize == 0 && mLocalSocket->bytesAvailable() >= static_cast<qint64>(sizeof(mMessageSize))) {
-                mLocalSocket->read(reinterpret_cast<char*>(&mMessageSize), static_cast<qint64>(sizeof(mMessageSize)));
+            // Read incoming message header
+            if(mHeader.mSize == 0 && mLocalSocket->bytesAvailable() >= static_cast<qint64>(sizeof(Header))) {
+                mLocalSocket->read(reinterpret_cast<char*>(&mHeader), static_cast<qint64>(sizeof(Header)));
             }
 
             // Read & handle message when fully available
-            messageReceived = (mLocalSocket->bytesAvailable() >= mMessageSize);
+            messageReceived = (mLocalSocket->bytesAvailable() >= mHeader.mSize);
             if(messageReceived) {
-                const QByteArray byteArray{mLocalSocket->read(mMessageSize)};
-                mMessageSize = 0;
+                const QByteArray byteArray{mLocalSocket->read(mHeader.mSize)};
+                const quint32 flags = mHeader.mType;
+                mHeader.mSize = 0;
+                mHeader.mType = 0;
 
-                emit received(QJsonDocument::fromJson(byteArray).object());
+                if(flags == Header::MSG_TYPE_JSON) {
+                    emit jsonMessageReceived(QJsonDocument::fromJson(byteArray).object());
+                }
+                else if(flags == Header::MSG_TYPE_BINARY) {
+                    emit binaryMessageReceived(byteArray);
+                }
             }
         }
     });
@@ -61,12 +68,26 @@ bool JsonClient::isConnected() const
     return mLocalSocket->isOpen();
 }
 
-void JsonClient::send(const QJsonObject& message)
+void JsonClient::sendJsonMessage(const QJsonObject& message)
 {
     const QByteArray byteArray(QJsonDocument(message).toJson(QJsonDocument::Compact));
-    const int size{byteArray.size()};
 
-    mLocalSocket->write(reinterpret_cast<const char*>(&size), static_cast<qint64>(sizeof(size)));
+    Header header;
+    header.mType = Header::MSG_TYPE_JSON;
+    header.mSize = static_cast<quint32>(byteArray.size());
+
+    mLocalSocket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(Header)));
     mLocalSocket->write(byteArray);
+    mLocalSocket->flush();
+}
+
+void JsonClient::sendBinaryMessage(const QByteArray& message)
+{
+    Header header;
+    header.mType = Header::MSG_TYPE_BINARY;
+    header.mSize = static_cast<quint32>(message.size());
+
+    mLocalSocket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(Header)));
+    mLocalSocket->write(message);
     mLocalSocket->flush();
 }
