@@ -63,6 +63,10 @@ bool JsonClient::connectToServer(const QString& name, int timeout)
     return result;
 }
 
+void JsonClient::disconnectFromServer() {
+    mLocalSocket->disconnectFromServer();
+}
+
 bool JsonClient::isConnected() const
 {
     return mLocalSocket->isOpen();

@@ -29,6 +29,8 @@ public:
     ~JsonClient() override;
 
     bool connectToServer(const QString& name, int timeout = 1000);
+    void disconnectFromServer();
+
     bool isConnected() const;
 
     Q_INVOKABLE void sendJsonMessage(const QJsonObject& message);
