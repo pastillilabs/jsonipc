@@ -11,6 +11,7 @@ HEADERS += $$files($$PWD/src/*.h)
 SOURCES += $$files($$PWD/src/*.cpp)
 
 OTHER_FILES += \
+    .gitignore \
     AUTHORS \
     LICENSE \
     README.md \
