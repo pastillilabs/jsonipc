@@ -1,27 +1,18 @@
-TEMPLATE = lib
+TEMPLATE = subdirs
 
-QT = core network
-CONFIG += plugin
-DEFINES += JSONIPC_LIBRARY
+CONFIG += jsonipc_tests
 
-INCLUDEPATH += $$PWD/include
+SUBDIRS = lib
 
-HEADERS += $$files($$PWD/include/*.h)
-HEADERS += $$files($$PWD/src/*.h)
-SOURCES += $$files($$PWD/src/*.cpp)
+jsonipc_tests {
+    SUBDIRS += \
+        tests \
+
+    tests.depends = lib
+}
 
 OTHER_FILES += \
     .gitignore \
     AUTHORS \
     LICENSE \
     README.md \
-
-android {
-    target.path = /libs/$${ANDROID_TARGET_ARCH}
-    INSTALLS += target
-}
-
-sailfish {
-    target.path = /usr/share/$${HARBOUR_NAME}/lib
-    INSTALLS += target
-}

@@ -1,22 +1,19 @@
-#include "jsonclient.h"
-#include <QDebug>
+#include "jsonipc/client.h"
+#include "jsonipc/logging.h"
+
 #include <QJsonDocument>
 #include <QJsonObject>
 
-JsonClient::JsonClient(QLocalSocket* localSocket, QObject* parent)
+namespace JsonIpc {
+
+Client::Client(QLocalSocket* localSocket, QObject* parent)
     : QObject{parent}
-    , mLocalSocket(localSocket ? localSocket : new QLocalSocket(this))
-{
+    , mLocalSocket(localSocket ? localSocket : new QLocalSocket(this)) {
     mLocalSocket->setParent(this);
 
-    connect(mLocalSocket, &QLocalSocket::connected, this, &JsonClient::connected);
-    connect(mLocalSocket, &QLocalSocket::disconnected, this, &JsonClient::disconnected);
-
-#if(QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
-    connect(mLocalSocket, &QLocalSocket::errorOccurred, this, &JsonClient::errorOccurred);
-#else
-    connect(mLocalSocket, static_cast<void (QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), this, &JsonClient::errorOccurred);
-#endif
+    connect(mLocalSocket, &QLocalSocket::connected, this, &Client::connected);
+    connect(mLocalSocket, &QLocalSocket::disconnected, this, &Client::disconnected);
+    connect(mLocalSocket, &QLocalSocket::errorOccurred, this, &Client::errorOccurred);
 
     connect(mLocalSocket, &QLocalSocket::readyRead, this, [this] {
         bool messageReceived{true};
@@ -36,23 +33,27 @@ JsonClient::JsonClient(QLocalSocket* localSocket, QObject* parent)
                 mHeader.mType = 0;
 
                 if(flags == Header::MSG_TYPE_JSON) {
-                    emit jsonMessageReceived(QJsonDocument::fromJson(byteArray).object());
+                    const QJsonObject message = QJsonDocument::fromJson(byteArray).object();
+                    qCInfo(category) << "RECEIVE" << message;
+                    emit jsonMessageReceived(message);
                 }
                 else if(flags == Header::MSG_TYPE_BINARY) {
+                    qCInfo(category) << "RECEIVE" << byteArray;
                     emit binaryMessageReceived(byteArray);
                 }
             }
         }
     });
+
+    qCDebug(category) << "Client created:" << mLocalSocket->socketDescriptor();
 }
 
-JsonClient::~JsonClient()
-{
+Client::~Client() {
     mLocalSocket->disconnectFromServer();
 }
 
-bool JsonClient::connectToServer(const QString& name, int timeout)
-{
+bool Client::connectToServer(const QString& name, int timeout) {
+    qCDebug(category) << "Connecting to server:" << name;
     bool result{false};
 
     if(!mLocalSocket->isOpen()) {
@@ -60,20 +61,27 @@ bool JsonClient::connectToServer(const QString& name, int timeout)
         result = mLocalSocket->waitForConnected(timeout);
     }
 
+    qCDebug(category) << "Server connection resulted in" << result;
+
     return result;
 }
 
-void JsonClient::disconnectFromServer() {
+void Client::disconnectFromServer() {
+    qCDebug(category) << "Disconnect from server";
     mLocalSocket->disconnectFromServer();
 }
 
-bool JsonClient::isConnected() const
-{
+bool Client::isConnected() const {
     return mLocalSocket->isOpen();
 }
 
-void JsonClient::sendJsonMessage(const QJsonObject& message)
-{
+QLocalSocket& Client::socket() const {
+    return *mLocalSocket;
+}
+
+
+void Client::sendJsonMessage(const QJsonObject& message) {
+    qCInfo(category) << message;
     const QByteArray byteArray(QJsonDocument(message).toJson(QJsonDocument::Compact));
 
     Header header;
@@ -85,8 +93,8 @@ void JsonClient::sendJsonMessage(const QJsonObject& message)
     mLocalSocket->flush();
 }
 
-void JsonClient::sendBinaryMessage(const QByteArray& message)
-{
+void Client::sendBinaryMessage(const QByteArray& message) {
+    qCInfo(category) << message;
     Header header;
     header.mType = Header::MSG_TYPE_BINARY;
     header.mSize = static_cast<quint32>(message.size());
@@ -95,3 +103,5 @@ void JsonClient::sendBinaryMessage(const QByteArray& message)
     mLocalSocket->write(message);
     mLocalSocket->flush();
 }
+
+} // namespace JsonIpc

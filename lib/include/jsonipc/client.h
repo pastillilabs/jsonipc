@@ -1,10 +1,12 @@
-#ifndef JSONCLIENT_H
-#define JSONCLIENT_H
+#pragma once
 
-#include <jsonipc_global.h>
+#include <jsonipc/jsonipc_global.h>
+
 #include <QLocalSocket>
 
 class QJsonObject;
+
+namespace JsonIpc {
 
 struct Header {
     quint8 mType{0};
@@ -17,24 +19,23 @@ struct Header {
 };
 
 /**
- * @brief The JsonClient class
+ * @brief The Client class
  */
-class JSONIPC_SHARED_EXPORT JsonClient
-    : public QObject
-{
+class JSONIPC_SHARED_EXPORT Client : public QObject {
     Q_OBJECT
 
 public:
-    JsonClient(QLocalSocket* localSocket = nullptr, QObject* parent = nullptr);
-    ~JsonClient() override;
+    Client(QLocalSocket* localSocket = nullptr, QObject* parent = nullptr);
+    ~Client() override;
 
     bool connectToServer(const QString& name, int timeout = 1000);
     void disconnectFromServer();
 
     bool isConnected() const;
+    QLocalSocket& socket() const;
 
-    Q_INVOKABLE void sendJsonMessage(const QJsonObject& message);
-    Q_INVOKABLE void sendBinaryMessage(const QByteArray& message);
+    void sendJsonMessage(const QJsonObject& message);
+    void sendBinaryMessage(const QByteArray& message);
 
 signals:
     void connected();
@@ -46,8 +47,6 @@ signals:
 private:
     QLocalSocket* mLocalSocket{nullptr};
     Header mHeader;
-
-    friend class JsonServer;
 };
 
-#endif // JSONCLIENT_H
+} // namespace JsonIpc

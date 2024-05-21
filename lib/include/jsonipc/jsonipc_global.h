@@ -1,5 +1,4 @@
-#ifndef JSONIPC_GLOBAL_H
-#define JSONIPC_GLOBAL_H
+#pragma once
 
 #include <QtCore/qglobal.h>
 
@@ -8,5 +7,3 @@
 #else
 #  define JSONIPC_SHARED_EXPORT Q_DECL_IMPORT
 #endif
-
-#endif // JSONIPC_GLOBAL_H

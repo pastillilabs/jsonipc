@@ -1,5 +1,7 @@
-#include "jsonserver.h"
-#include <QDebug>
+#include "jsonipc/server.h"
+#include "jsonipc/client.h"
+#include "jsonipc/logging.h"
+
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocalSocket>
@@ -10,30 +12,33 @@ const int MAX_RETRIES = 3;
 
 } // namespace
 
-JsonServer::JsonServer(QObject* parent)
+namespace JsonIpc {
+
+Server::Server(QObject* parent)
     : QObject{parent}
-    , mAcceptHandler([](const QLocalSocket&) { return true; })
-{
+    , mAcceptHandler([](const QLocalSocket&) { return true; }) {
     connect(&mLocalServer, &QLocalServer::newConnection, this, [this] {
         QLocalSocket* localSocket{mLocalServer.nextPendingConnection()};
 
         if(localSocket && mAcceptHandler(*localSocket)) {
-            JsonClient* jsonClient = new JsonClient(localSocket, this);
-            mClients.append(jsonClient);
+            Client* client = new Client(localSocket, this);
+            mClients.append(client);
 
-            connect(jsonClient, &JsonClient::disconnected, this, [this, jsonClient] {
-                mClients.removeOne(jsonClient);
+            connect(client, &Client::disconnected, this, [this, client] {
+                mClients.removeOne(client);
 
-                jsonClient->deleteLater();
+                client->deleteLater();
             });
 
-            emit newClient(*jsonClient);
+            emit newClient(*client);
         }
     });
+
+    qCDebug(category) << "Server created";
 }
 
-bool JsonServer::listen(const QString& name)
-{
+bool Server::listen(const QString& name) {
+    qCDebug(category) << "Listen as" << name;
     bool result{false};
 
     if(!mLocalServer.isListening()) {
@@ -61,36 +66,33 @@ bool JsonServer::listen(const QString& name)
         }
     }
 
+    qCDebug(category) << "Listen resulted in" << result;
+
     return result;
 }
 
-void JsonServer::setAcceptHandler(AcceptHandler acceptHandler)
-{
+void Server::setAcceptHandler(AcceptHandler acceptHandler) {
     mAcceptHandler = acceptHandler;
 }
 
-void JsonServer::setSocketOptions(QLocalServer::SocketOptions options)
-{
+void Server::setSocketOptions(QLocalServer::SocketOptions options) {
     mLocalServer.setSocketOptions(options);
 }
 
-void JsonServer::close()
-{
+void Server::close() {
     mLocalServer.close();
 }
 
-bool JsonServer::isEmpty() const
-{
+bool Server::isEmpty() const {
     return mClients.isEmpty();
 }
 
-bool JsonServer::isListening() const
-{
+bool Server::isListening() const {
     return mLocalServer.isListening();
 }
 
-void JsonServer::sendJsonMessageAll(const QJsonObject& message)
-{
+void Server::sendJsonMessageAll(const QJsonObject& message) {
+    qCInfo(category) << message;
     const QByteArray byteArray(QJsonDocument(message).toJson(QJsonDocument::Compact));
 
     Header header;
@@ -98,27 +100,29 @@ void JsonServer::sendJsonMessageAll(const QJsonObject& message)
     header.mSize = static_cast<quint32>(byteArray.size());
 
     const auto& clients = mClients;
-    for(JsonClient* jsonClient : clients) {
-        QLocalSocket* socket(jsonClient->mLocalSocket);
+    for(Client* Client : clients) {
+        QLocalSocket& socket(Client->socket());
 
-        socket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
-        socket->write(byteArray);
-        socket->flush();
+        socket.write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
+        socket.write(byteArray);
+        socket.flush();
     }
 }
 
-void JsonServer::sendBinaryMessageAll(const QByteArray& message)
-{
+void Server::sendBinaryMessageAll(const QByteArray& message) {
+    qCInfo(category) << message;
     Header header;
     header.mType = Header::MSG_TYPE_BINARY;
     header.mSize = static_cast<quint32>(message.size());
 
     const auto& clients = mClients;
-    for(JsonClient* jsonClient : clients) {
-        QLocalSocket* socket(jsonClient->mLocalSocket);
+    for(Client* Client : clients) {
+        QLocalSocket& socket(Client->socket());
 
-        socket->write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
-        socket->write(message);
-        socket->flush();
+        socket.write(reinterpret_cast<const char*>(&header), static_cast<qint64>(sizeof(header)));
+        socket.write(message);
+        socket.flush();
     }
 }
+
+} // namespace JsonIpc

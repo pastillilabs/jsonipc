@@ -1,8 +1,6 @@
-#ifndef JSONSERVER_H
-#define JSONSERVER_H
+#pragma once
 
-#include <jsonclient.h>
-#include <jsonipc_global.h>
+#include <jsonipc/jsonipc_global.h>
 
 #include <functional>
 
@@ -11,19 +9,21 @@
 
 class QJsonObject;
 
+namespace JsonIpc {
+
+class Client;
+
 /**
- * @brief The JsonServer class
+ * @brief The Server class
  */
-class JSONIPC_SHARED_EXPORT JsonServer
-    : public QObject
-{
+class JSONIPC_SHARED_EXPORT Server : public QObject {
     Q_OBJECT
 
 public:
     using AcceptHandler = std::function<bool(QLocalSocket&)>;
 
 public:
-    explicit JsonServer(QObject* parent = nullptr);
+    explicit Server(QObject* parent = nullptr);
 
     bool listen(const QString& name);
     void setAcceptHandler(AcceptHandler acceptHandler);
@@ -37,13 +37,13 @@ public:
     void sendBinaryMessageAll(const QByteArray& message);
 
 signals:
-    void newClient(JsonClient& client);
+    void newClient(Client& client);
 
 private:
     QLocalServer mLocalServer;
-    QVector<JsonClient*> mClients;
+    QVector<Client*> mClients;
 
     AcceptHandler mAcceptHandler{[](const QLocalSocket&) { return true; }};
 };
 
-#endif // JSONSERVER_H
+} // namespace JsonIpc
