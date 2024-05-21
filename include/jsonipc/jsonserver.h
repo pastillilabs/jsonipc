@@ -1,8 +1,7 @@
-#ifndef JSONSERVER_H
-#define JSONSERVER_H
+#pragma once
 
-#include <jsonclient.h>
-#include <jsonipc_global.h>
+#include <jsonipc/jsonclient.h>
+#include <jsonipc/jsonipc_global.h>
 
 #include <functional>
 
@@ -45,5 +44,3 @@ private:
 
     AcceptHandler mAcceptHandler{[](const QLocalSocket&) { return true; }};
 };
-
-#endif // JSONSERVER_H

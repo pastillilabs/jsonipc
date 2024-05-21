@@ -6,7 +6,7 @@ DEFINES += JSONIPC_LIBRARY
 
 INCLUDEPATH += $$PWD/include
 
-HEADERS += $$files($$PWD/include/*.h)
+HEADERS += $$files($$PWD/include/jsonipc/*.h)
 HEADERS += $$files($$PWD/src/*.h)
 SOURCES += $$files($$PWD/src/*.cpp)
 

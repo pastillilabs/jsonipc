@@ -1,5 +1,5 @@
-#include "jsonserver.h"
-#include <QDebug>
+#include "jsonipc/jsonserver.h"
+
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocalSocket>

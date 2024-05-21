@@ -1,7 +1,7 @@
-#ifndef JSONCLIENT_H
-#define JSONCLIENT_H
+#pragma once
 
-#include <jsonipc_global.h>
+#include <jsonipc/jsonipc_global.h>
+
 #include <QLocalSocket>
 
 class QJsonObject;
@@ -49,5 +49,3 @@ private:
 
     friend class JsonServer;
 };
-
-#endif // JSONCLIENT_H
